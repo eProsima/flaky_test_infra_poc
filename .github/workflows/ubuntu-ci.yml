@@ -48,6 +48,13 @@ jobs:
         run: |
           pip install pytest pytest-json-report requests
 
+      - name: Fetch googletest
+        uses: eProsima/eProsima-CI/multiplatform/vcs_import@v0
+        with:
+          vcs_repos_file: ${{ github.workspace }}/src/flaky_test_infra_poc/.github/workflows/config/ci.repos
+          destination_workspace: src
+          skip_existing: 'true'
+
       - name: Set current date as env variable
         id: date
         run: echo "::set-output name=date::$(date +'%Y-%m-%dT%H-%M-%S')"
