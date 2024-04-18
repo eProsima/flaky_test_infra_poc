@@ -1,0 +1,4 @@
+"names":
+    "flaky_test_infra":
+        "cmake-args":
+            - "-DCMAKE_BUILD_TYPE=Debug"

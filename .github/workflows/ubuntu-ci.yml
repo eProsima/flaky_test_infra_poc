@@ -1,0 +1,114 @@
+name: Ubuntu CI Flaky Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      os-image:
+        description: 'The OS image for the workflow'
+        required: false
+        type: string
+        default: 'ubuntu-22.04'
+      label:
+        description: 'ID associated to the workflow'
+        required: true
+        type: string
+      cmake-args:
+        description: 'Extra arguments for cmake cli'
+        required: false
+        type: string
+      ctest-args:
+        description: 'Extra arguments for ctest cli'
+        required: false
+        type: string
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test-ci:
+    runs-on: ${{ inputs.os-image }}
+    steps:
+      - name: Get minimum supported version of CMake
+        uses: eProsima/eProsima-CI/external/get-cmake@v0
+        with:
+          cmakeVersion: '3.22.6'
+
+      - name: Install colcon
+        uses: eProsima/eProsima-CI/ubuntu/install_colcon@v0
+
+      - name: Install Python dependencies
+        run: |
+          pip install pytest pytest-json-report requests
+
+      - name: Set current date as env variable
+        id: date
+        run: echo "::set-output name=date::$(date +'%Y-%m-%dT%H-%M-%S')"
+
+      - name: Colcon build
+        run: |
+          colcon build --metas ${{ github.workspace }}/src/flaky_test_infra_poc/.github/workflows/config/colcon.meta
+
+      - name: Colcon test
+        run: |
+          cd ${{ github.workspace }}
+          mkdir test_results
+          test_results_file="${{ github.workspace }}/test_results/test_results-${{ steps.date.outputs.date }}.xml"
+          colcon test --event-handlers=console_direct+
+          # Translate CTest XML reports to jUnit in case CTest does not support '--output-junit'
+          if [ ! -f ${test_results_file} ]
+          then
+            echo "::group::Translating test report to jUnit..."
+
+            python3 eProsima/eProsima-CI/resources/ctest2junit.py \
+              --build-dir ${{ github.workspace }}/build/${package} \
+              --xslt eProsima/eProsima-CI/resources/ctest-to-junit.xsl \
+              --output-junit ${test_results_file}
+            echo "::endgroup::"
+          fi
+
+      - name: Upload test report in JUnit format
+        uses: eProsima/eProsima-CI/external/upload-artifact@main
+        if: ${{ ! cancelled() }}
+        with:
+            name: ${{ format('test_report_{0}_{1}_{2}', inputs.label, github.job, join(matrix.*, '_')) }}
+            path: ${{ github.workspace }}/test_results
+
+      - name: Test summary
+        uses: eProsima/eProsima-CI/multiplatform/junit_summary@v0
+        with:
+          junit_reports_dir: "${{ github.workspace }}"
+          print_summary: 'True'
+          show_failed: 'True'
+          show_disabled: 'False'
+          show_skipped: 'False'
+
+      - name: Download previous test results with plugin
+        if: always()
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: ubuntu-ci.yml
+          name: test-results-all
+          workflow_conclusion: completed
+
+      - name: Flaky test analysis and heatmaps - grouping by 2 runs - 10 runs history
+        if: always()
+        uses: F-Secure/flaky-tests-detection@master
+        with:
+          args: --junit-files=. --grouping-option=runs --window-size=2 --window-count=5 --top-n=5 --heatmap
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-results-all
+          path: |
+            *.xml
+
+      - name: Upload heatmaps
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: heatmaps
+          path: |
+            *.png
