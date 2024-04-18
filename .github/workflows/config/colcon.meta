@@ -1,4 +1,9 @@
-"names":
-    "flaky_test_infra":
-        "cmake-args":
+names:
+    flaky_test_infra:
+        cmake-args:
             - "-DCMAKE_BUILD_TYPE=Debug"
+    googletest-distribution:
+        cmake-args:
+            - "-Dgtest_force_shared_crt=ON"
+            - "-DBUILD_SHARED_LIBS=ON"
+            - "-DBUILD_GMOCK=ON"
