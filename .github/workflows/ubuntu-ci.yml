@@ -29,10 +29,17 @@ jobs:
   test-ci:
     runs-on: ${{ inputs.os-image }}
     steps:
+
       - name: Get minimum supported version of CMake
         uses: eProsima/eProsima-CI/external/get-cmake@v0
         with:
           cmakeVersion: '3.22.6'
+
+      - name: Sync eProsima/Fast-DDS repository
+        uses: eProsima/eProsima-CI/external/checkout@v0
+        with:
+          path: src/flaky_test_infra_poc
+          ref: 'main'
 
       - name: Install colcon
         uses: eProsima/eProsima-CI/ubuntu/install_colcon@v0
@@ -55,7 +62,7 @@ jobs:
           mkdir test_results
           test_results_file="${{ github.workspace }}/test_results/test_results-${{ steps.date.outputs.date }}.xml"
           colcon test --event-handlers=console_direct+
-          # Translate CTest XML reports to jUnit 
+          # Translate CTest XML reports to jUnit
           if [ ! -f ${test_results_file} ]
           then
             echo "::group::Translating test report to jUnit..."
