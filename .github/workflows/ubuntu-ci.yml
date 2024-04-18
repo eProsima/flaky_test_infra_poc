@@ -55,14 +55,14 @@ jobs:
           mkdir test_results
           test_results_file="${{ github.workspace }}/test_results/test_results-${{ steps.date.outputs.date }}.xml"
           colcon test --event-handlers=console_direct+
-          # Translate CTest XML reports to jUnit in case CTest does not support '--output-junit'
+          # Translate CTest XML reports to jUnit 
           if [ ! -f ${test_results_file} ]
           then
             echo "::group::Translating test report to jUnit..."
 
-            python3 eProsima/eProsima-CI/resources/ctest2junit.py \
+            python3 ${{ github.action_path }}/../../resources/ctest2junit.py \
               --build-dir ${{ github.workspace }}/build/${package} \
-              --xslt eProsima/eProsima-CI/resources/ctest-to-junit.xsl \
+              --xslt ${{ github.action_path }}/../../resources/ctest-to-junit.xsl \
               --output-junit ${test_results_file}
             echo "::endgroup::"
           fi
