@@ -67,49 +67,39 @@ jobs:
         run: |
           cd ${{ github.workspace }}
           mkdir test_results
-          test_results_file="${{ github.workspace }}/test_results/test_results-${{ steps.date.outputs.date }}.xml"
+          test_results_file="${{ github.workspace }}/test_results-${{ steps.date.outputs.date }}.xml"
           colcon test --event-handlers=console_direct+
           # Translate CTest XML reports to jUnit
           if [ ! -f ${test_results_file} ]
           then
             echo "::group::Translating test report to jUnit..."
-
-            python3 ${{ github.action_path }}/../../resources/ctest2junit.py \
-              --build-dir ${{ github.workspace }}/build/${package} \
-              --xslt ${{ github.action_path }}/../../resources/ctest-to-junit.xsl \
+            python3 ${{ github.workspace }}/src/flaky_test_infra_poc/resources/ctest2junit.py \
+              --build-dir ${{ github.workspace }}/build/flaky_test_infra \
+              --xslt ${{ github.workspace }}/src/flaky_test_infra_poc/resources/ctest-to-junit.xsl \
               --output-junit ${test_results_file}
             echo "::endgroup::"
           fi
 
-      - name: Upload test report in JUnit format
-        uses: eProsima/eProsima-CI/external/upload-artifact@main
-        if: ${{ ! cancelled() }}
-        with:
-            name: ${{ format('test_report_{0}_{1}_{2}', inputs.label, github.job, join(matrix.*, '_')) }}
-            path: ${{ github.workspace }}/test_results
+      # - name: Upload test report in JUnit format
+      #   uses: eProsima/eProsima-CI/external/upload-artifact@main
+      #   if: ${{ ! cancelled() }}
+      #   with:
+      #       name: ${{ format('test_report_{0}_{1}_{2}', inputs.label, github.job, join(matrix.*, '_')) }}
+      #       path: ${{ github.workspace }}/test-results-all
 
-      - name: Test summary
-        uses: eProsima/eProsima-CI/multiplatform/junit_summary@v0
-        with:
-          junit_reports_dir: "${{ github.workspace }}"
-          print_summary: 'True'
-          show_failed: 'True'
-          show_disabled: 'False'
-          show_skipped: 'False'
-
-      - name: Download previous test results with plugin
-        if: always()
-        uses: dawidd6/action-download-artifact@v2
-        with:
-          workflow: ubuntu-ci.yml
-          name: test-results-all
-          workflow_conclusion: completed
+      # - name: Download previous test results with plugin
+      #   if: always()
+      #   uses: dawidd6/action-download-artifact@v2
+      #   with:
+      #     workflow: ubuntu-ci.yml
+      #     name: test-results-all
+      #     workflow_conclusion: completed
 
       - name: Flaky test analysis and heatmaps - grouping by 2 runs - 10 runs history
         if: always()
         uses: F-Secure/flaky-tests-detection@master
         with:
-          args: --junit-files=. --grouping-option=runs --window-size=2 --window-count=5 --top-n=5 --heatmap
+          args: --junit-files=. --grouping-option=runs --window-size=1 --window-count=1 --top-n=1 --heatmap
 
       - name: Upload test results
         if: always()
@@ -126,3 +116,12 @@ jobs:
           name: heatmaps
           path: |
             *.png
+
+      - name: Test summary
+        uses: eProsima/eProsima-CI/multiplatform/junit_summary@v0
+        with:
+          junit_reports_dir: "${{ github.workspace }}"
+          print_summary: 'True'
+          show_failed: 'True'
+          show_disabled: 'False'
+          show_skipped: 'False'
