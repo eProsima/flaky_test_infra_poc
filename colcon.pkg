@@ -1,0 +1,5 @@
+{
+    "name": "flaky_test_infra",
+    "type": "cmake",
+    "dependencies" : ["googletest-distribution"]
+}
