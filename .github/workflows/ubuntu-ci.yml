@@ -46,7 +46,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install pytest pytest-json-report requests vcstool
+          pip install pytest pytest-json-report requests vcstool lxml
 
       - name: Fetch googletest
         uses: eProsima/eProsima-CI/multiplatform/vcs_import@v0
@@ -55,13 +55,13 @@ jobs:
           destination_workspace: src
           skip_existing: 'true'
 
-      - name: Set current date as env variable
-        id: date
-        run: echo "::set-output name=date::$(date +'%Y-%m-%dT%H-%M-%S')"
-
       - name: Colcon build
         run: |
           colcon build --metas ${{ github.workspace }}/src/flaky_test_infra_poc/.github/workflows/config/colcon.meta
+          
+      - name: Set current date as env variable
+        id: date
+        run: echo "::set-output name=date::$(date +'%Y-%m-%dT%H-%M-%S')"
 
       - name: Colcon test
         run: |
