@@ -80,13 +80,6 @@ jobs:
             echo "::endgroup::"
           fi
 
-      # - name: Upload test report in JUnit format
-      #   uses: eProsima/eProsima-CI/external/upload-artifact@main
-      #   if: ${{ ! cancelled() }}
-      #   with:
-      #       name: ${{ format('test_report_{0}_{1}_{2}', inputs.label, github.job, join(matrix.*, '_')) }}
-      #       path: ${{ github.workspace }}/test-results-all
-
       - name: Download previous test results with plugin
         if: always()
         uses: dawidd6/action-download-artifact@v2
@@ -99,7 +92,7 @@ jobs:
         if: always()
         uses: F-Secure/flaky-tests-detection@master
         with:
-          args: --junit-files=. --grouping-option=runs --window-size=1 --window-count=2 --top-n=2 --heatmap
+          args: --junit-files=. --grouping-option=runs --window-size=1 --window-count=5 --top-n=5 --heatmap
 
       - name: Upload test results
         if: always()
