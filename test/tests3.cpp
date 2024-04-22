@@ -8,7 +8,7 @@ using namespace testing;
 
 TEST(flaky_tests_3, check_odd_flaky){
     // Seed the random number generator with the current time
-    srand(static_cast<unsigned int>(time(nullptr)));
+    srand(static_cast<unsigned int>(time(nullptr))+2);
     int num = rand();
     int result = num%2;
     std::cout<<"Check odd (flaky): number "<<num<<std::endl;
