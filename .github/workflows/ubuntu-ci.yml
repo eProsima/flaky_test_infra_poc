@@ -88,11 +88,11 @@ jobs:
           name: test-results-all
           workflow_conclusion: completed
 
-      - name: Flaky test analysis and heatmaps - grouping by 2 runs - 10 runs history
+      - name: Flaky test analysis and heatmaps - grouping by [window-size] runs - [window-size]*[window-count] runs history
         if: always()
         uses: F-Secure/flaky-tests-detection@master
         with:
-          args: --junit-files=. --grouping-option=runs --window-size=2 --window-count=5 --top-n=5 --heatmap
+          args: --junit-files=. --grouping-option=runs --window-size=5 --window-count=2 --top-n=6 --heatmap
 
       - name: Upload test results
         if: always()
