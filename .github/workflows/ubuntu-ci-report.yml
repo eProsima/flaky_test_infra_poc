@@ -93,7 +93,16 @@ jobs:
           python ${{ github.workspace }}/src/flaky_test_infra_poc/resources/check_flakes.py --junit-files=. --grouping-option=runs --window-size=5 --window-count=2 --top-n=6
 
       - name: Create report file with flaky tests
-        run: echo "${{ steps.flaky_analysis.outputs.top_flip_rates }}" > top_flip_rates_summary.txt
+        run: |
+          top_flip_rates=("${{ steps.flaky_analysis.outputs.top_flip_rates[@] }}")
+          scores=("${{ steps.flaky_analysis.outputs.scores[@] }}")
+          if [ ${#top_flip_rates[@]} -ne ${#scores[@]} ]; then
+            echo "Error: The lengths of top_flip_rates and scores arrays don't match."
+            exit 1
+          fi
+          for i in "${!top_flip_rates[@]}"; do
+            echo "flaky_test($((i+1))) ${top_flip_rates[$i]}"
+          done > flaky_tests_report.txt
 
       - name: Upload again all the test
         if: always()
@@ -107,9 +116,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: top_flip_rates_summary
+          name: flaky_tests_report
           path: |
-            top_flip_rates_summary.txt
+            flaky_tests_report.txt
 
       - name: Test summary
         uses: eProsima/eProsima-CI/multiplatform/junit_summary@v0

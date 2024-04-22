@@ -225,7 +225,8 @@ def main():
     for test_name, score in top_flip_rates.items():
         logging.info(f"{test_name} --- score: {score}")
 
-    print('::set-output name=top_flip_rates::{}'.format(','.join(top_flip_rates)))
+    print('::set-output name=top_flip_rates::{}'.format(', '.join(top_flip_rates)))
+    print('::set-output name=score::{}'.format(', '.join(score)))
     print(top_flip_rates)
 
 
