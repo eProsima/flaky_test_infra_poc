@@ -7,7 +7,6 @@ from typing import Dict, Set
 from junitparser import JUnitXml, TestSuite
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import seaborn as sns
 
 EWM_ALPHA = 0.1
@@ -113,29 +112,6 @@ def get_top_fliprates(fliprate_table: pd.DataFrame, top_n: int, precision: int) 
     return {testname: Decimal(score) * 1 for testname, score in top_fliprates_ewm.to_records(index=False)}
 
 
-def get_image_tables_from_fliprate_table(
-    fliprate_table: pd.DataFrame,
-    top_identifiers_ewm: Set[str],
-) -> pd.DataFrame:
-    """Construct tables for heatmap generation from the fliprate table.
-
-    Rows contain the test identifier and columns contain the window as timestamp for
-    daily grouping or integer for grouping with runs.
-    """
-    pivot_columns = "timestamp" if "timestamp" in fliprate_table.columns else "window"
-    image_ewm = fliprate_table.pivot(index="test_identifier", columns=pivot_columns, values="flip_rate_ewm")
-    return image_ewm[image_ewm.index.isin(top_identifiers_ewm)]
-
-
-def generate_image(image: pd.DataFrame, title: str, filename: str) -> None:
-    """Save a seaborn heatmap with given data"""
-    plt.figure(figsize=HEATMAP_FIGSIZE)
-    plt.title(title, fontsize=50)
-    sns.heatmap(data=image, linecolor="black", linewidths=0.1, annot=True).set_facecolor("black")
-    plt.savefig(filename, bbox_inches="tight")
-    plt.close()
-
-
 def parse_junit_suite_to_df(suite: TestSuite) -> list:
     """Parses Junit TestSuite results to a test history dataframe"""
     dataframe_entries = []
@@ -185,41 +161,6 @@ def parse_junit_to_df(folderpath: Path) -> pd.DataFrame:
         raise RuntimeError(f"No Junit files found from path {folderpath}")
 
 
-def create_heat_map(
-    heatmap: bool,
-    fliprate_table: pd.DataFrame,
-    top_flip_rates: Dict[str, Decimal],
-    grouping_option: str,
-    top_n: int,
-    window_size: int,
-    window_count: int,
-):
-    if not heatmap:
-        return
-
-    logging.info("\n\nGenerating heatmap images...")
-    top_identifiers_ewm = set(top_flip_rates.keys())
-
-    table_data = get_image_tables_from_fliprate_table(fliprate_table, top_identifiers_ewm)
-
-    if grouping_option == "days":
-        title_ewm = (
-            f"Top {top_n} of tests with highest latest window exponentially weighted moving average fliprate score "
-            f"- alpha (smoothing factor) = {EWM_ALPHA} - last {window_size * window_count} days of data"
-        )
-        filename_ewm = f"{window_size}day_flip_rate_ewm_top{top_n}.png"
-    else:
-        title_ewm = (
-            f"Top {top_n} of tests with highest latest window exponentially weighted moving average fliprate score - "
-            f"alpha (smoothing factor) = {EWM_ALPHA} - {window_size} last runs fliprate and "
-            f"{window_size * window_count} last runs data"
-        )
-        filename_ewm = f"{window_size}runs_flip_rate_ewm_top{top_n}.png"
-
-    generate_image(table_data, title_ewm, filename_ewm)
-    logging.info(f"generated {filename_ewm}")
-
-
 def main():
     """Print out top flaky tests and their fliprate scores.
     Also generate seaborn heatmaps visualizing the results if wanted.
@@ -262,7 +203,6 @@ def main():
         default=4,
         dest="decimal_count",
     )
-    parser.add_argument("--heatmap", action="store_true", default=False)
     args = parser.parse_args()
     precision = args.decimal_count
 
@@ -287,9 +227,6 @@ def main():
 
     print('::set-output name=top_flip_rates::{}'.format(','.join(top_flip_rates)))
     print(top_flip_rates)
-    create_heat_map(
-        args.heatmap, fliprate_table, top_flip_rates, args.grouping_option, top_n, args.window_size, args.window_count
-    )
 
 
 if __name__ == "__main__":

@@ -46,7 +46,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install pytest pytest-json-report requests vcstool lxml junitparser
+          pip install pytest pytest-json-report requests vcstool lxml junitparser pandas numpy seaborn
 
       - name: Fetch googletest
         uses: eProsima/eProsima-CI/multiplatform/vcs_import@v0
