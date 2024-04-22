@@ -166,16 +166,17 @@ def create_md_summary(results):
     summary = '## Flaky tests\n'
 
     # Table header
-    summary += '|Suite|Total number of flaky tests|\n'
-    summary += '|-|-|\n'
+    summary += '|Total number of flaky tests|\n'
+    summary += '|-|\n'
+    summary += f'|{len(results)}'
+    summary += '|\n'
 
-    # Test lists
+    # Flaky tests list
+    summary += f'\n### Flaky test list:\n'
+    summary += '<details>\n\n'
     for test in results:
-        # Flaky tests list
-            summary += f'\n### Flaky test list:\n'
-            summary += '<details>\n\n'
-            summary += f'* {test}\n'
-            summary += '</details>\n'
+        summary += f'* {test}\n'
+    summary += '</details>\n'
 
     return summary
 
