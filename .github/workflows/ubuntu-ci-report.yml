@@ -1,0 +1,121 @@
+name: Ubuntu CI Flaky Tests Report
+
+on:
+  workflow_dispatch:
+    inputs:
+      os-image:
+        description: 'The OS image for the workflow'
+        required: false
+        type: string
+        default: 'ubuntu-22.04'
+      label:
+        description: 'ID associated to the workflow'
+        required: true
+        type: string
+      cmake-args:
+        description: 'Extra arguments for cmake cli'
+        required: false
+        type: string
+      ctest-args:
+        description: 'Extra arguments for ctest cli'
+        required: false
+        type: string
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  detect-flaky:
+    runs-on: ${{ inputs.os-image }}
+    steps:
+
+      - name: Get minimum supported version of CMake
+        uses: eProsima/eProsima-CI/external/get-cmake@v0
+        with:
+          cmakeVersion: '3.22.6'
+
+      - name: Sync eProsima/Fast-DDS repository
+        uses: eProsima/eProsima-CI/external/checkout@v0
+        with:
+          path: src/flaky_test_infra_poc
+          ref: 'main'
+
+      - name: Install colcon
+        uses: eProsima/eProsima-CI/ubuntu/install_colcon@v0
+
+      - name: Install Python dependencies
+        run: |
+          pip install pytest pytest-json-report requests vcstool lxml junitparser
+
+      - name: Fetch googletest
+        uses: eProsima/eProsima-CI/multiplatform/vcs_import@v0
+        with:
+          vcs_repos_file: ${{ github.workspace }}/src/flaky_test_infra_poc/.github/workflows/config/ci.repos
+          destination_workspace: src
+          skip_existing: 'true'
+
+      - name: Colcon build
+        run: |
+          colcon build --metas ${{ github.workspace }}/src/flaky_test_infra_poc/.github/workflows/config/colcon.meta
+
+      - name: Set current date as env variable
+        id: date
+        run: echo "::set-output name=date::$(date +'%Y-%m-%dT%H-%M-%S')"
+
+      - name: Colcon test
+        run: |
+          cd ${{ github.workspace }}
+          test_results_file="${{ github.workspace }}/test_results-${{ steps.date.outputs.date }}.xml"
+          colcon test --event-handlers=console_direct+
+          # Translate CTest XML reports to jUnit
+          if [ ! -f ${test_results_file} ]
+          then
+            echo "::group::Translating test report to jUnit..."
+            python3 ${{ github.workspace }}/src/flaky_test_infra_poc/resources/ctest2junit.py \
+              --build-dir ${{ github.workspace }}/build/flaky_test_infra \
+              --xslt ${{ github.workspace }}/src/flaky_test_infra_poc/resources/ctest-to-junit.xsl \
+              --output-junit ${test_results_file}
+            echo "::endgroup::"
+          fi
+
+      - name: Download previous test results with plugin
+        if: always()
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: ubuntu-ci.yml
+          name: test-results-all
+          workflow_conclusion: completed
+
+      - name: Flaky test analysis - grouping by [window-size] runs - [window-size]*[window-count] runs history
+        id: flaky_analysis
+        run: |
+          python ${{ github.workspace }}/src/flaky_test_infra_poc/resources/check_flakes.py --junit-files=. --grouping-option=runs --window-size=5 --window-count=2 --top-n=6
+
+      - name: Create report file with flaky tests
+        run: echo "${{ steps.flaky_analysis.outputs.top_flip_rates }}" > top_flip_rates_summary.txt
+
+      - name: Upload again all the test
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-results-all
+          path: |
+            *.xml
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: top_flip_rates_summary
+          path: |
+            top_flip_rates_summary.txt
+
+      - name: Test summary
+        uses: eProsima/eProsima-CI/multiplatform/junit_summary@v0
+        with:
+          junit_reports_dir: "${{ github.workspace }}"
+          print_summary: 'True'
+          show_failed: 'True'
+          show_disabled: 'False'
+          show_skipped: 'False'
