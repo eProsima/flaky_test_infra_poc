@@ -11,9 +11,11 @@ TEST(flaky_tests_3, check_odd_flaky){
     srand(static_cast<unsigned int>(time(nullptr)));
     int num = rand();
     int result = num%2;
-    std::cout<<"Check odd flaky: number "<<num<<std::endl;
+    std::cout<<"Check odd (flaky): number "<<num<<std::endl;
     ASSERT_NE(result, 0);
 }
+
+
 
 int main(int argc, char *argv[])
 {

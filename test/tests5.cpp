@@ -4,15 +4,15 @@
 
 using namespace testing;
 
-TEST(flaky_tests_2, check_even_flaky){
+
+
+TEST(flaky_tests_5, check_greater_than_flaky){
     // Seed the random number generator with the current time
     srand(static_cast<unsigned int>(time(nullptr))+1);
-    int num = rand();
-    int result = num%2;
-    std::cout<<"Check even (flaky): number "<<num<<std::endl;
-    ASSERT_EQ(result, 0);
+    int result = rand()/RAND_MAX;
+    std::cout<<"Check greater than 0.5 (flaky): number "<<result<<std::endl;
+    ASSERT_GT(result, 0.5);
 }
-
 
 int main(int argc, char *argv[])
 {

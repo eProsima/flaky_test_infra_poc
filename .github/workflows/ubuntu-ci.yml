@@ -92,7 +92,7 @@ jobs:
         if: always()
         uses: F-Secure/flaky-tests-detection@master
         with:
-          args: --junit-files=. --grouping-option=runs --window-size=1 --window-count=5 --top-n=5 --heatmap
+          args: --junit-files=. --grouping-option=runs --window-size=2 --window-count=5 --top-n=5 --heatmap
 
       - name: Upload test results
         if: always()
