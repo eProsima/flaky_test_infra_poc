@@ -221,6 +221,13 @@ def main():
         default=4,
         dest="decimal_count",
     )
+    parser.add_argument(
+        '-o',
+        '--output-file',
+        type=str,
+        required=True,
+        help='Path to output file.'
+    )
     args = parser.parse_args()
     precision = args.decimal_count
 
@@ -249,7 +256,10 @@ def main():
             f.write('%s\n' % test)
 
     summary = create_md_summary(top_flip_rates)
-    print(summary)
+
+    if args.output_file != '':
+        with open(args.output_file, 'a') as file:
+            file.write(summary)
 
 
 if __name__ == "__main__":
