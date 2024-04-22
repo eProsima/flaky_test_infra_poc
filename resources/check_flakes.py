@@ -226,8 +226,10 @@ def main():
         logging.info(f"{test_name} --- score: {score}")
 
     print('::set-output name=top_flip_rates::{}'.format(', '.join(top_flip_rates)))
-    print('::set-output name=score::{}'.format(', '.join(score)))
-    print(top_flip_rates)
+    with open('flaky_tests_report.txt', 'w') as f:
+        for test in top_flip_rates:
+            f.write('%s\n' % test)
+
 
 
 if __name__ == "__main__":
