@@ -160,23 +160,17 @@ def parse_junit_to_df(folderpath: Path) -> pd.DataFrame:
     else:
         raise RuntimeError(f"No Junit files found from path {folderpath}")
 
-def create_md_summary(results):
+def create_md_summary(results,):
     """Create Markdown summary from results."""
     # Test summary
     summary = '## Flaky tests\n'
 
     # Table header
-    summary += '|Total number of flaky tests|\n'
-    summary += '|-|\n'
-    summary += f'|{len(results)}'
-    summary += '|\n'
-
-    # Flaky tests list
-    summary += f'\n### Flaky test list:\n'
-    summary += '<details>\n\n'
-    for test in results:
-        summary += f'* {test}\n'
-    summary += '</details>\n'
+    summary += '|#|Flaky tests|Fliprate score|\n'
+    summary += '|-|-|-|\n'
+    i = 1
+    for test_name, score in results:
+        summary += f'| {i} | {test_name} | {score} |\n'
 
     return summary
 
