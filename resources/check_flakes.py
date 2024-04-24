@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 
-EWM_ALPHA = 0.1
+EWM_ALPHA = 1
 EWM_ADJUST = False
 HEATMAP_FIGSIZE = (100, 50)
 
@@ -26,14 +26,17 @@ def parse_input_files(junit_files: str, test_history_csv: str):
     return df.sort_index()
 
 
-def calc_fliprate(testruns: pd.Series) -> float:
+def calc_fliprate(testruns: pd.Series) -> pd.DataFrame:
     """Calculate test result fliprate from given test results series"""
     if len(testruns) < 2:
-        return 0.0
+        return pd.DataFrame({'flip_rate': [0.0], 'consecutive_failures': [0]})
+
     first = True
     previous = None
     flips = 0
+    consecutive_failures = 0
     possible_flips = len(testruns) - 1
+
     for _, val in testruns.items():
         if first:
             first = False
@@ -41,8 +44,16 @@ def calc_fliprate(testruns: pd.Series) -> float:
             continue
         if val != previous:
             flips += 1
+        if val != "pass":
+            consecutive_failures += 1
+        else:
+            consecutive_failures = 0
         previous = val
-    return flips / possible_flips
+
+    flip_rate = flips / possible_flips
+
+    return pd.DataFrame({'flip_rate': [flip_rate], 'consecutive_failures': [consecutive_failures]})
+
 
 
 def non_overlapping_window_fliprate(testruns: pd.Series, window_size: int, window_count: int) -> pd.Series:
@@ -50,11 +61,10 @@ def non_overlapping_window_fliprate(testruns: pd.Series, window_size: int, windo
     testruns_reversed = testruns.iloc[::-1]
     fliprate_groups = (
         testruns_reversed.groupby(np.arange(len(testruns_reversed)) // window_size)
-        .apply(calc_fliprate)
+        .apply(lambda x: calc_fliprate(x))
         .iloc[:window_count]
     )
-    return fliprate_groups.rename(lambda x: window_count - x).sort_index()
-
+    return fliprate_groups.reset_index(drop=True).rename(index=lambda x: window_count - x).sort_index()
 
 def calculate_n_days_fliprate_table(testrun_table: pd.DataFrame, days: int, window_count: int) -> pd.DataFrame:
     """Select given history amount and calculate fliprates for given n day windows.
@@ -75,26 +85,36 @@ def calculate_n_days_fliprate_table(testrun_table: pd.DataFrame, days: int, wind
 
     return fliprate_table[fliprate_table.flip_rate != 0]
 
-
 def calculate_n_runs_fliprate_table(testrun_table: pd.DataFrame, window_size: int, window_count: int) -> pd.DataFrame:
     """Calculate fliprates for given n run window and select m of those windows
     Return a table containing the results.
     """
+    # Apply non_overlapping_window_fliprate to each group in testrun_table
     fliprates = testrun_table.groupby("test_identifier")["test_status"].apply(
         lambda x: non_overlapping_window_fliprate(x, window_size, window_count)
     )
 
-    fliprate_table = fliprates.rename("flip_rate").reset_index()
+    # Convert fliprates Series of DataFrames to a DataFrame
+    fliprate_table = fliprates.reset_index()
+
+    # Rename the columns in fliprate_table
+    fliprate_table = fliprate_table.rename(columns={"flip_rate": "flip_rate", "consecutive_failures": "consecutive_failures"})
+
+    # Calculate the EWMA of flip rates for each test identifier
     fliprate_table["flip_rate_ewm"] = (
         fliprate_table.groupby("test_identifier")["flip_rate"]
         .ewm(alpha=EWM_ALPHA, adjust=EWM_ADJUST)
         .mean()
         .droplevel("test_identifier")
     )
+
+    # Rename the index level to "window"
     fliprate_table = fliprate_table.rename(columns={"level_1": "window"})
 
-    return fliprate_table[fliprate_table.flip_rate != 0]
+    # Filter out rows where flip_rate is not zero
+    fliprate_table = fliprate_table[fliprate_table.flip_rate != 0]
 
+    return fliprate_table
 
 def get_top_fliprates(fliprate_table: pd.DataFrame, top_n: int, precision: int) -> Dict[str, Decimal]:
     """return the top n highest scoring test identifiers and their scores
@@ -242,8 +262,8 @@ def main():
     logging.info(
         f"\nTop {top_n} flaky tests based on latest window exponential weighted moving average fliprate score",
     )
-    for test_name, score in top_flip_rates.items():
-        logging.info(f"{test_name} --- score: {score}")
+    for test_name, score, consec_fail in top_flip_rates.items():
+        logging.info(f"{test_name} --- score: {score} --- consecuitve failures: {consec_fail}")
 
     print('::set-output name=top_flip_rates::{}'.format(', '.join(top_flip_rates)))
     with open('flaky_tests_report.txt', 'w') as f:
