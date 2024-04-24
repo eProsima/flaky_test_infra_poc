@@ -116,20 +116,26 @@ def calculate_n_runs_fliprate_table(testrun_table: pd.DataFrame, window_size: in
 
     return fliprate_table
 
-def get_top_fliprates(fliprate_table: pd.DataFrame, top_n: int, precision: int) -> Dict[str, Decimal]:
-    """return the top n highest scoring test identifiers and their scores
+def get_top_fliprates(fliprate_table: pd.DataFrame, top_n: int, precision: int) -> Dict[str, tuple[Decimal, int]]:
+    """Return the top n highest scoring test identifiers and their scores
 
     Look at the last calculation window for each test from the fliprate table
-    and return the top n highest scoring test identifiers and their scores
+    and return the top n highest scoring test identifiers along with their scores
+    and corresponding consecutive failures.
     """
     context = getcontext()
     context.prec = precision
     context.rounding = ROUND_UP
     last_window_values = fliprate_table.groupby("test_identifier").last()
 
-    top_fliprates_ewm = last_window_values.nlargest(top_n, "flip_rate_ewm")[["flip_rate_ewm"]].reset_index()
-    #  Context precision and rounding only come into play during arithmetic operations. Therefore * 1
-    return {testname: Decimal(score) * 1 for testname, score in top_fliprates_ewm.to_records(index=False)}
+    top_fliprates_ewm = last_window_values.nlargest(top_n, "flip_rate_ewm")
+
+    # Create a dictionary with test_identifier as keys and a tuple of flip_rate_ewm and consecutive_failures as values
+    results = {}
+    for test_id, row in top_fliprates_ewm.iterrows():
+        results[test_id] = (Decimal(row["flip_rate_ewm"]), row["consecutive_failures"])
+
+    return results
 
 
 def parse_junit_suite_to_df(suite: TestSuite) -> list:
@@ -180,17 +186,18 @@ def parse_junit_to_df(folderpath: Path) -> pd.DataFrame:
     else:
         raise RuntimeError(f"No Junit files found from path {folderpath}")
 
-def create_md_summary(results,):
+def create_md_summary(results):
     """Create Markdown summary from results."""
     # Test summary
     summary = '## Flaky tests\n'
 
     # Table header
-    summary += '|#|Flaky tests|Fliprate score|\n'
-    summary += '|-|-|-|\n'
+    summary += '|#|Flaky tests|Fliprate score|Consecutive failures|\n'
+    summary += '|-|-|-|-|\n'
     i = 1
-    for test_name, score in results:
-        summary += f'| {i} | {test_name} | {score} |\n'
+    for test_name, (flip_rate_ewm, consecutive_failures) in results.items():
+        summary += f'| {i} | {test_name} | {flip_rate_ewm} | {consecutive_failures} |\n'
+        i += 1
 
     return summary
 
@@ -262,8 +269,8 @@ def main():
     logging.info(
         f"\nTop {top_n} flaky tests based on latest window exponential weighted moving average fliprate score",
     )
-    for test_name, score, consec_fail in top_flip_rates.items():
-        logging.info(f"{test_name} --- score: {score} --- consecuitve failures: {consec_fail}")
+    for test_id, (flip_rate_ewm, consecutive_failures) in top_flip_rates.items():
+        logging.info(f"{test_id} --- flip_rate_ewm: {flip_rate_ewm} --- consecutive failures: {consecutive_failures}")
 
     print('::set-output name=top_flip_rates::{}'.format(', '.join(top_flip_rates)))
     with open('flaky_tests_report.txt', 'w') as f:
