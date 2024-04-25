@@ -61,13 +61,13 @@ jobs:
 
       - name: Set current date as env variable
         id: date
-        run: echo "::set-output name=date::$(date +'%Y-%m-%dT%H-%M-%S')"
+        run: echo "NOW=$(date +'%Y-%m-%dT%H-%M-%S')" >> $GITHUB_ENV
 
       - name: Colcon test
         run: |
           cd ${{ github.workspace }}
           mkdir test_results
-          test_results_file="${{ github.workspace }}/test_results-${{ steps.date.outputs.date }}.xml"
+          test_results_file="${{ github.workspace }}/test_results-$NOW.xml"
           colcon test --event-handlers=console_direct+
           # Translate CTest XML reports to jUnit
           if [ ! -f ${test_results_file} ]
@@ -77,7 +77,7 @@ jobs:
               --build-dir ${{ github.workspace }}/build/flaky_test_infra \
               --xslt ${{ github.workspace }}/src/flaky_test_infra_poc/resources/ctest-to-junit.xsl \
               --output-junit ${test_results_file} \
-              --timestamp "${{ steps.date.outputs.date }}"
+              --timestamp "$NOW"
             echo "::endgroup::"
           fi
 
