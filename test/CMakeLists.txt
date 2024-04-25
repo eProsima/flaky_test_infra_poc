@@ -33,3 +33,6 @@ add_test(NAME check_less_than_flaky COMMAND flaky_tests_7)
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 include(CPack)
+
+
+add_subdirectory(python)

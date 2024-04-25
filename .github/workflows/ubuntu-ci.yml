@@ -21,6 +21,8 @@ on:
         required: false
         type: string
 
+  pull_request:
+  
 defaults:
   run:
     shell: bash
