@@ -76,7 +76,8 @@ jobs:
             python3 ${{ github.workspace }}/src/flaky_test_infra_poc/resources/ctest2junit.py \
               --build-dir ${{ github.workspace }}/build/flaky_test_infra \
               --xslt ${{ github.workspace }}/src/flaky_test_infra_poc/resources/ctest-to-junit.xsl \
-              --output-junit ${test_results_file}
+              --output-junit ${test_results_file} \
+              --timestamp "${{ steps.date.outputs.date }}"
             echo "::endgroup::"
           fi
 
