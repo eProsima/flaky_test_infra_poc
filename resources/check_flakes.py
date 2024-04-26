@@ -93,12 +93,13 @@ def calculate_n_runs_fliprate_table(testrun_table: pd.DataFrame, window_size: in
     fliprates = testrun_table.groupby("test_identifier")["test_status"].apply(
         lambda x: non_overlapping_window_fliprate(x, window_size, window_count)
     )
-
+    print(fliprates)
     # Convert fliprates Series of DataFrames to a DataFrame
-    fliprate_table = fliprates.reset_index()
+    #fliprate_table = fliprates.reset_index()
 
     # Rename the columns in fliprate_table
-    fliprate_table = fliprate_table.rename(columns={"flip_rate": "flip_rate", "consecutive_failures": "consecutive_failures"})
+    fliprate_table = fliprates.rename(columns={"flip_rate": "flip_rate", "consecutive_failures": "consecutive_failures"})
+    print(fliprate_table)
 
     # Calculate the EWMA of flip rates for each test identifier
     fliprate_table["flip_rate_ewm"] = (
