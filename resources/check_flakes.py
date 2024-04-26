@@ -23,7 +23,7 @@ def parse_input_files(junit_files: str, test_history_csv: str):
             index_col="timestamp",
             parse_dates=["timestamp"],
         )
-    return df.sort_index(ascending=False)
+    return df.sort_index()
 
 
 def calc_fliprate(testruns: pd.Series) -> pd.DataFrame:
@@ -36,7 +36,8 @@ def calc_fliprate(testruns: pd.Series) -> pd.DataFrame:
     flips = 0
     consecutive_failures = 0
     possible_flips = len(testruns) - 1
-
+    print("calc_fliprate")
+    print(testruns)
     for _, val in testruns.items():
         if first:
             first = False
@@ -56,12 +57,15 @@ def calc_fliprate(testruns: pd.Series) -> pd.DataFrame:
 
 
 
-def non_overlapping_window_fliprate(testruns: pd.Series, window_size: int, window_count: int) -> pd.Series:
-    """Reverse given testruns to latest first and calculate flip rate for non-overlapping run windows"""
-    fliprate_groups = (
-        testruns.groupby(np.arange(len(testruns)) // window_size)
-        .apply(lambda x: calc_fliprate(x))
-    )
+def non_overlapping_window_fliprate(testruns: pd.Series, window_size: int) -> pd.Series:
+    """Calculate flip rate for non-overlapping run windows"""
+    # Apply calc_fliprate directly to the selected rows
+    print("grouped by test identifier: ")
+    print(testruns)
+    testruns_last = testruns.iloc[-window_size:]
+    fliprate_groups = calc_fliprate(testruns_last)
+    print("fliprate_groups")
+    print(fliprate_groups)
     return fliprate_groups.reset_index(drop=True)
 
 def calculate_n_days_fliprate_table(testrun_table: pd.DataFrame, days: int, window_count: int) -> pd.DataFrame:
@@ -83,20 +87,25 @@ def calculate_n_days_fliprate_table(testrun_table: pd.DataFrame, days: int, wind
 
     return fliprate_table[fliprate_table.flip_rate != 0]
 
-def calculate_n_runs_fliprate_table(testrun_table: pd.DataFrame, window_size: int, window_count: int) -> pd.DataFrame:
+def calculate_n_runs_fliprate_table(testrun_table: pd.DataFrame, window_size: int) -> pd.DataFrame:
     """Calculate fliprates for given n run window and select m of those windows
     Return a table containing the results.
     """
+    print("all tests:")
+    print(testrun_table)
+    #testrun_table = testrun_table.iloc[-window_size:]
     # Apply non_overlapping_window_fliprate to each group in testrun_table
     fliprates = testrun_table.groupby("test_identifier")["test_status"].apply(
-        lambda x: non_overlapping_window_fliprate(x, window_size, window_count)
+        lambda x: non_overlapping_window_fliprate(x, window_size)
     )
-    print(fliprates)
+
     # Convert fliprates Series of DataFrames to a DataFrame
     fliprate_table = fliprates.reset_index()
-
+    print("fliprate_table")
+    print(fliprate_table)
     # Rename the columns in fliprate_table
     fliprate_table = fliprate_table.rename(columns={"flip_rate": "flip_rate", "consecutive_failures": "consecutive_failures"})
+    print("fliprate table final:")
     print(fliprate_table)
 
     # Calculate the EWMA of flip rates for each test identifier
@@ -253,11 +262,11 @@ def main():
     precision = args.decimal_count
 
     df = parse_input_files(args.junit_files, args.test_history_csv)
-    print(df)
+
     if args.grouping_option == "days":
         fliprate_table = calculate_n_days_fliprate_table(df, args.window_size, args.window_count)
     else:
-        fliprate_table = calculate_n_runs_fliprate_table(df, args.window_size, args.window_count)
+        fliprate_table = calculate_n_runs_fliprate_table(df, args.window_size)
 
     top_flip_rates = get_top_fliprates(fliprate_table, args.top_n, precision)
 
