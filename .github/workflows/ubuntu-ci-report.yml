@@ -51,7 +51,7 @@ jobs:
       - name: Flaky test analysis - grouping by [window-size] runs - [window-size]*[window-count] runs history
         id: flaky_analysis
         run: |
-          python ${{ github.workspace }}/src/flaky_test_infra_poc/resources/check_flakes.py --junit-files=. --grouping-option=runs --window-size=5 --window-count=1 --top-n=6 --output-file=$GITHUB_STEP_SUMMARY
+          python ${{ github.workspace }}/src/flaky_test_infra_poc/resources/check_flakes.py --junit-files=. --grouping-option=runs --window-size=5 --window-count=1 --output-file=$GITHUB_STEP_SUMMARY
 
       - name: Upload test report
         if: always()

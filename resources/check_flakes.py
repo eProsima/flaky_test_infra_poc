@@ -60,8 +60,6 @@ def calc_fliprate(testruns: pd.Series) -> pd.DataFrame:
 def non_overlapping_window_fliprate(testruns: pd.Series, window_size: int) -> pd.Series:
     """Calculate flip rate for non-overlapping run windows"""
     # Apply calc_fliprate directly to the selected rows
-    print("grouped by test identifier: ")
-    print(testruns)
     testruns_last = testruns.iloc[-window_size:]
     fliprate_groups = calc_fliprate(testruns_last)
     print("fliprate_groups")
@@ -136,7 +134,10 @@ def get_top_fliprates(fliprate_table: pd.DataFrame, top_n: int, precision: int) 
     context.rounding = ROUND_UP
     last_window_values = fliprate_table.groupby("test_identifier").last()
 
-    top_fliprates_ewm = last_window_values.nlargest(top_n, "flip_rate_ewm")
+    if top_n != 0:
+        top_fliprates_ewm = last_window_values.nlargest(top_n, "flip_rate_ewm")
+    else :
+        top_fliprates_ewm = last_window_values.nlargest(len(last_window_values), "flip_rate_ewm")
 
     # Create a dictionary with test_identifier as keys and a tuple of flip_rate_ewm and consecutive_failures as values
     results = {}
@@ -242,7 +243,7 @@ def main():
         "--top-n",
         type=int,
         help="amount of unique tests and scores to print out",
-        required=True,
+        required=False,
     )
     parser.add_argument(
         "--precision, -p",
@@ -260,6 +261,10 @@ def main():
     )
     args = parser.parse_args()
     precision = args.decimal_count
+    if args.top_n :
+        top_n = args.top_n
+    else :
+        top_n = 0
 
     df = parse_input_files(args.junit_files, args.test_history_csv)
 
@@ -268,14 +273,14 @@ def main():
     else:
         fliprate_table = calculate_n_runs_fliprate_table(df, args.window_size)
 
-    top_flip_rates = get_top_fliprates(fliprate_table, args.top_n, precision)
+    top_flip_rates = get_top_fliprates(fliprate_table, top_n, precision)
 
     if not top_flip_rates:
         logging.info("No flaky tests.")
         return
-    top_n = args.top_n
+
     logging.info(
-        f"\nTop {top_n} flaky tests based on latest window exponential weighted moving average fliprate score",
+        f"\nTop {top_n} flaky tests based on latest window fliprate score",
     )
     for test_id, (flip_rate_ewm, consecutive_failures) in top_flip_rates.items():
         logging.info(f"{test_id} --- flip_rate_ewm: {flip_rate_ewm} --- consecutive failures: {consecutive_failures}")
