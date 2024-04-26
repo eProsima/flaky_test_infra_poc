@@ -23,7 +23,7 @@ def parse_input_files(junit_files: str, test_history_csv: str):
             index_col="timestamp",
             parse_dates=["timestamp"],
         )
-    return df.sort_index()
+    return df.sort_index(ascending=False)
 
 
 def calc_fliprate(testruns: pd.Series) -> pd.DataFrame:
@@ -64,7 +64,7 @@ def non_overlapping_window_fliprate(testruns: pd.Series, window_size: int, windo
         .apply(lambda x: calc_fliprate(x))
         .iloc[:window_count]
     )
-    return fliprate_groups.reset_index(drop=True).rename(index=lambda x: window_count - x).sort_index()
+    return fliprate_groups.reset_index(drop=True).rename(index=lambda x: window_count - x)
 
 def calculate_n_days_fliprate_table(testrun_table: pd.DataFrame, days: int, window_count: int) -> pd.DataFrame:
     """Select given history amount and calculate fliprates for given n day windows.
@@ -75,7 +75,7 @@ def calculate_n_days_fliprate_table(testrun_table: pd.DataFrame, days: int, wind
 
     fliprates = data.groupby([pd.Grouper(freq=f"{days}D"), "test_identifier"])["test_status"].apply(calc_fliprate)
 
-    fliprate_table = fliprates.rename("flip_rate").reset_index()
+    fliprate_table = fliprates.rename("flip_rate").reset_index(drop=True)
     fliprate_table["flip_rate_ewm"] = (
         fliprate_table.groupby("test_identifier")["flip_rate"]
         .ewm(alpha=EWM_ALPHA, adjust=EWM_ADJUST)
@@ -254,7 +254,7 @@ def main():
     precision = args.decimal_count
 
     df = parse_input_files(args.junit_files, args.test_history_csv)
-
+    print(df)
     if args.grouping_option == "days":
         fliprate_table = calculate_n_days_fliprate_table(df, args.window_size, args.window_count)
     else:
