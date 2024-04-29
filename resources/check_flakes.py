@@ -12,7 +12,7 @@ import seaborn as sns
 EWM_ALPHA = 1
 EWM_ADJUST = False
 HEATMAP_FIGSIZE = (100, 50)
-
+test_counts = {}
 
 def parse_input_files(junit_files: str, test_history_csv: str):
     if junit_files:
@@ -155,6 +155,9 @@ def parse_junit_suite_to_df(suite: TestSuite) -> list:
     for testcase in suite:
         test_identifier = testcase.classname + "::" + testcase.name
 
+        # Update test count
+        test_counts[test_identifier] = test_counts.get(test_identifier, 0) + 1
+
         # junitparser has "failure", "skipped" or "error" in result list if any
         if not testcase.result:
             test_status = "pass"
@@ -168,10 +171,10 @@ def parse_junit_suite_to_df(suite: TestSuite) -> list:
                 "timestamp": time,
                 "test_identifier": test_identifier,
                 "test_status": test_status,
+                "test_count": test_counts[test_identifier],  
             }
         )
     return dataframe_entries
-
 
 def parse_junit_to_df(folderpath: Path) -> pd.DataFrame:
     """Read JUnit test result files to a test history dataframe"""
