@@ -26,11 +26,8 @@
                     <xsl:variable name="className" select="translate(Path, '/.', '.')"/>
                     <testcase classname="projectroot{$className}"
                         name="{$testName}"
+                        status="{$status}"
                         time="{$duration}">
-                        <xsl:if test="@Status!='passed'">
-                            <failure>
-                            </failure>
-                        </xsl:if>
                     </testcase>
                 </xsl:for-each>
             </testsuite>

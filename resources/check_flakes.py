@@ -8,6 +8,7 @@ from junitparser import JUnitXml, TestSuite
 import pandas as pd
 import numpy as np
 import seaborn as sns
+import xml.etree.ElementTree as ET
 
 EWM_ALPHA = 1
 EWM_ADJUST = False
@@ -150,19 +151,21 @@ def get_top_fliprates(fliprate_table: pd.DataFrame, top_n: int, precision: int) 
 def parse_junit_suite_to_df(suite: TestSuite) -> list:
     """Parses Junit TestSuite results to a test history dataframe"""
     dataframe_entries = []
-    time = suite.timestamp
+    time = suite.attrib.get('timestamp')
 
-    for testcase in suite:
-        test_identifier = testcase.classname + "::" + testcase.name
+    for testcase in suite.findall('.//testcase'):
+        test_identifier = testcase.attrib.get('classname') + "::" + testcase.attrib.get('name')
 
         # Update test count
         test_counts[test_identifier] = test_counts.get(test_identifier, 0) + 1
 
-        # junitparser has "failure", "skipped" or "error" in result list if any
-        if not testcase.result:
+        status = testcase.attrib.get('status')
+
+        # Convert status to "pass" if it's "passed"
+        if status == "passed":
             test_status = "pass"
         else:
-            test_status = testcase.result[0]._tag
+            test_status = status
             if test_status == "skipped":
                 continue
 
@@ -180,14 +183,11 @@ def parse_junit_to_df(folderpath: Path) -> pd.DataFrame:
     dataframe_entries = []
 
     for filepath in folderpath.glob("*.xml"):
-        xml = JUnitXml.fromfile(filepath)
-        if isinstance(xml, JUnitXml):
-            for suite in xml:
-                dataframe_entries += parse_junit_suite_to_df(suite)
-        elif isinstance(xml, TestSuite):
-            dataframe_entries += parse_junit_suite_to_df(xml)
-        else:
-            raise TypeError(f"not known suite type in {filepath}")
+        xml = ET.parse(filepath)
+        root = xml.getroot()
+        for suite in root.findall('.//testsuite'):
+            dataframe_entries += parse_junit_suite_to_df(suite)
+
 
     if dataframe_entries:
         df = pd.DataFrame(dataframe_entries)
