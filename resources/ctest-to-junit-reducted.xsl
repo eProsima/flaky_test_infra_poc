@@ -18,21 +18,17 @@
                 skipped="{$numberOfSkipped}"
                 time="{$buildTime}"
                 timestamp="{$var1}">
-                <xsl:for-each select="//Site/Testing/Test">
-                    <xsl:if test="@Status=='failed'">
-                        <xsl:variable name="testName" select="translate(Name, '-', '_')"/>
-                        <xsl:variable name="duration" select="Results/NamedMeasurement[@name='Execution Time']/Value"/>
-                        <xsl:variable name="status" select="@Status"/>
-                        <xsl:variable name="output" select="Results/Measurement/Value"/>
-                        <xsl:variable name="className" select="translate(Path, '/.', '.')"/>
-                        <testcase classname="projectroot{$className}"
-                            name="{$testName}"
-                            status="{$status}"
-                            time="{$duration}">
-                            <failure>
-                            </failure>
-                        </testcase>
-                    </xsl:if>
+            <xsl:for-each select="//Site/Testing/Test">
+                    <xsl:variable name="testName" select="translate(Name, '-', '_')"/>
+                    <xsl:variable name="duration" select="Results/NamedMeasurement[@name='Execution Time']/Value"/>
+                    <xsl:variable name="status" select="@Status"/>
+                    <xsl:variable name="output" select="Results/Measurement/Value"/>
+                    <xsl:variable name="className" select="translate(Path, '/.', '.')"/>
+                    <testcase classname="projectroot{$className}"
+                        name="{$testName}"
+                        status="{$status}"
+                        time="{$duration}">
+                    </testcase>
                 </xsl:for-each>
             </testsuite>
         </testsuites>

@@ -77,7 +77,7 @@ jobs:
             echo "::group::Translating test report to jUnit..."
             python3 ${{ github.workspace }}/src/flaky_test_infra_poc/resources/ctest2junit.py \
               --build-dir ${{ github.workspace }}/build/flaky_test_infra \
-              --xslt ${{ github.workspace }}/src/flaky_test_infra_poc/resources/ctest-to-junit.xsl \
+              --xslt ${{ github.workspace }}/src/flaky_test_infra_poc/resources/ctest-to-junit-reducted.xsl \
               --output-junit ${test_results_file} \
               --timestamp "$NOW"
             echo "::endgroup::"
