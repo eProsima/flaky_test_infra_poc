@@ -203,11 +203,11 @@ def create_md_summary(results):
     summary = '## Flaky tests\n'
 
     # Table header
-    summary += '|#|Flaky tests|Fliprate score|Consecutive failures|\n'
+    summary += '|#|Flaky tests|Fliprate score %|Consecutive failures|\n'
     summary += '|-|-|-|-|\n'
     i = 1
     for test_name, (flip_rate_ewm, consecutive_failures) in results.items():
-        summary += f'| {i} | {test_name} | {round(flip_rate_ewm, 2)} | {consecutive_failures} |\n'
+        summary += f'| {i} | {test_name} | {round(flip_rate_ewm, 2)*100} | {consecutive_failures} |\n'
         i += 1
 
     return summary
