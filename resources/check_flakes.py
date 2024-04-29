@@ -171,7 +171,6 @@ def parse_junit_suite_to_df(suite: TestSuite) -> list:
                 "timestamp": time,
                 "test_identifier": test_identifier,
                 "test_status": test_status,
-                "test_count": test_counts[test_identifier],  
             }
         )
     return dataframe_entries
